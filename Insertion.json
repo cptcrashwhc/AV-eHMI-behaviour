@@ -1,0 +1,34 @@
+{
+  "insertions": [
+    {
+      "name": "penguin.gif",
+      "duration": 5,
+      "isImg": false
+    },
+    {
+      "name": "hello.png",
+      "duration": 5,
+      "isImg": true
+    },
+    {
+      "name": "pleasewait.png",
+      "duration": 5,
+      "isImg": true
+    },
+    {
+      "name": "nocross.png",
+      "duration": 5,
+      "isImg": true
+    },
+    {
+      "name": "nocross2.png",
+      "duration": 5,
+      "isImg": true
+    },
+    {
+      "name": "cross.png",
+      "duration": 5,
+      "isImg": true
+    }
+  ]
+}

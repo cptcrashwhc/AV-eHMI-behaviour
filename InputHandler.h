@@ -1,0 +1,72 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/cppFiles/class.h to edit this template
+ */
+
+/* 
+ * File:   InputHandler.h
+ * Author: weihan
+ *
+ * Created on 31 August 2022, 15:58
+ */
+
+#ifndef INPUTHANDLER_H
+#define INPUTHANDLER_H
+
+
+#include <cstdlib>
+#include <iostream>
+#include <utility>
+#include <fstream>
+#include <vector>
+#include <cstring>
+#include <algorithm>
+#include <ctime>
+#include <ratio>
+#include <chrono>
+
+#include "rapidjson/rapidjson.h"
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/reader.h"
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/istreamwrapper.h"
+
+#include <sw/redis++/redis++.h>
+#include <sw/redis++/errors.h>
+
+#include "DataD.h"
+#include "ScenarioHandler.h"
+#include "Scenario.h"
+
+using namespace std;
+using namespace rapidjson;
+using namespace sw::redis;
+using namespace std::chrono;
+
+
+class InputHandler {
+public:
+    InputHandler();
+    InputHandler(const InputHandler& orig);
+    void setServerInfo();
+    string getAddress();
+    string getChannel();
+    static bool sorter(const DataD&, const DataD&);
+    void SelectorLogic(DataD*);
+    int RedisConnect();
+    static void MessageProc(string, string);
+    virtual ~InputHandler();
+    
+protected:
+    static vector<DataD> inputdvector;
+    string address;
+    string channel;
+    static int fid2;
+    ScenarioHandler sHandler;
+private:
+
+};
+
+#endif /* INPUTHANDLER_H */
+

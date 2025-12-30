@@ -1,0 +1,364 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/cppFiles/class.cc to edit this template
+ */
+
+/* 
+ * File:   InputHandler.cpp
+ * Author: weihan
+ * 
+ * Created on 31 August 2022, 15:58
+ */
+
+
+#include "InputHandler.h"
+
+using namespace std;
+using namespace rapidjson;
+//using namespace sw::redis;
+
+using namespace std::chrono;
+
+vector<DataD> InputHandler::inputdvector;
+
+int InputHandler::fid2 = 0;
+
+//DataD structd;
+
+InputHandler::InputHandler() {
+    //RedisConnect();
+    //SelectorLogic();
+    setServerInfo();
+}
+
+InputHandler::InputHandler(const InputHandler& orig) {
+    inputdvector = orig.inputdvector;
+    std::copy(orig.inputdvector.begin(), orig.inputdvector.end(), inputdvector.begin());
+    address = orig.address;
+    channel = orig.channel;
+    //sorter() = orig.sorter();
+    fid2 = orig.fid2;
+    
+    sHandler = orig.sHandler;
+}
+
+
+void InputHandler::setServerInfo() {
+    ifstream redisinfo("RedisServer.json");
+    IStreamWrapper wrapper(redisinfo);
+
+    Document info;
+    info.ParseStream(wrapper);
+
+    const Value& dat = info["Redis_server"];
+    address = dat["address"].GetString();
+    channel = dat["channelsub"].GetString();
+    hostname = dat["hostname"].GetString();
+    port = dat["port"].GetString();
+}
+string InputHandler::getAddress() {
+    return address;
+}
+string InputHandler::getChannelsub() {
+    return channel;
+}
+string InputHandler::getHostname() {
+    return hostname;
+}
+string InputHandler::getPort() {
+    return port;
+}
+
+
+bool InputHandler::sorter(const DataD& x, const DataD& y) {
+//    return x.ydistance < y.ydistance;     //small to big
+    return x.ydistance > y.ydistance;     //opposite: big to small
+}
+
+
+void InputHandler::SelectorLogic(DataD *dat) {   // conditional scenario selector with int 1, 2, 3, 4 
+    int count = dat->count;
+    
+    double fcs = dat->crossingScore;
+    string state = dat->state;
+    double ydist = dat->ydistance;
+    double xdist = dat->xdistance;
+
+
+//        cout << "selector logic fcs: " << fcs << endl;
+//        cout << "selector logic state: " << state << endl;
+//        cout << "selector logic ydistance: " << ydist << endl;
+
+//    ScenarioHandler sHandler;
+//    sHandler.ScenarioLoading();
+
+    if (/*fcs >= 0.0 && state == "walking" &&*/ ydist < 10.0 && ydist != 0.0)     //the logic
+    {
+        cout << "yer" << endl;
+        sHandler.setScenarioDecision(3);
+    } else {
+        cout << "meh" << endl;
+        sHandler.setScenarioDecision(5); 
+    }
+}
+
+//void InputHandler::RedisPPConnect() {
+//    
+//    ScenarioHandler::ScenarioLoading();     //for static function
+//    
+//    //= To Connect
+//    //auto redis = Redis("tcp://127.0.0.1:6379");         
+//    auto redis = Redis(getAddress());                   //CHANGE to hiredis equivalent**
+//    cout << redis.ping() << endl;                       //ping server for pong return  //CHANGE to hiredis equivalent**
+//    
+//    
+//
+//    // SET some things like KEY
+//    for (auto idx = 0; idx < 100; ++idx) {
+//        // Reuse the Redis object in the loop.
+//        redis.set("key", "val");                        //CHANGE to hiredis equivalent**
+//    }
+//
+//    //= To Subscribe
+//    auto sub = redis.subscriber();                      //CHANGE to hiredis equivalent**
+//    sub.on_message(&MessageProc);        // Process message of MESSAGE type. Goes to the address  //CHANGE to hiredis equivalent**
+//
+//    //sub.subscribe("moo");                   // Subscribe to channel
+//    sub.subscribe(getChannel());                        //CHANGE to hiredis equivalent**
+//
+//    //= Consume messages
+//
+//    while (true) {
+////        try {
+//        sub.consume();                                  //CHANGE to hiredis equivalent**
+////        } catch (const Error &err) {
+////            // Handle exceptions
+////        }
+//    }
+//}
+
+//void InputHandler::subCallback(redisAsyncContext *c, void *r, void *privdata) {
+//
+//    redisReply *reply = (redisReply*)r;
+//    if (reply == NULL) {
+//        cout << "Response not recev" << endl; 
+//        return;
+//    }
+//    if (reply->type == REDIS_REPLY_ARRAY & reply->elements == 3) {
+//        if (strcmp(reply->element[0]->str,"subscribe") != 0) {
+//            cout << "Message received -> " << reply->element[2]->str << "( on channel : " << reply->element[1]->str << ")" << endl;
+//        }
+//    }
+//}
+//
+//void InputHandler::pubCallback(redisAsyncContext *c, void *r, void *privdata) {
+//
+//    redisReply *reply = (redisReply*)r;
+//    if (reply == NULL) {
+//        cout << "Response not recev" << endl; 
+//        return;
+//    }
+//    cout << "message published" << endl;
+//    redisAsyncDisconnect(c);
+//}
+//
+//void InputHandler::HRedisConnect() {
+//    
+//    ScenarioHandler::ScenarioLoading();
+//    
+//    string processName("sub");  //select "sub" or "pub"
+//
+//    signal(SIGPIPE, SIG_IGN);
+//    struct event_base*
+//        base = event_base_new();
+//
+//    redisAsyncContext* 
+//        _redisContext = redisAsyncConnect("127.0.0.1", 6379);
+//
+//    if (_redisContext->err) {
+//        /* Let context leak for now... */
+//        cout << "Error: " << _redisContext->errstr<<endl;
+//    }
+//
+//    redisLibeventAttach(_redisContext,base);
+//   
+//    int status;
+//    
+//    if(processName.compare("sub") == 0) {
+//        string command ("subscribe ");      
+//        command.append(getChannel());        //channel name to read
+//
+//        status = redisAsyncCommand(_redisContext, subCallback, (char*)"sub", command.c_str()); 
+//    }
+//
+//    event_base_dispatch(base);
+//
+//}
+
+
+void InputHandler::ConnectRedis() {
+    
+    ScenarioHandler::ScenarioLoading();
+    
+    //= To Connect
+    
+    struct timeval timeout = {1, 500000}; // 1.5 seconds
+    //printf("Hostname: %s\n", getHostname());
+    //printf("Port: %s\n", getPort());
+    //c = redisConnectWithTimeout(getHostname(), getPort(), timeout);
+    c = redisConnect("127.0.0.1", 6379);
+    
+//    if (c == NULL || c->err)
+//    {
+//        if (c) {
+//            printf("Connection error: %s\n", c->errstr);
+//            redisFree(c);
+//        } else {
+//            cout << "Connection error: cannot allocate Redis context " << endl;
+//        }
+//        //exit(1);
+//    }
+    
+    //= To PING for PONG
+    reply = (redisReply *)redisCommand(c, "PING");
+    printf("PING: %s\n", reply->str);
+    freeReplyObject(reply);
+    
+    //= Set KEY
+//    for (auto idx = 0; idx < 100; ++idx) {
+//        reply = (redisReply *)redisCommand(c, "SET %s %s", "key", "val");
+//    }
+    reply = (redisReply *)redisCommand(c, "SET %s %s", "key", "val");
+    printf("SET: %s\n", reply->str);
+    freeReplyObject(reply);
+    
+    
+    //= Send command to SUBSCRIBE? 
+    //redisLibeventAttach(c, base);
+    reply = (redisReply *)redisCommand(c, "SUBSCRIBE %s", getChannelsub());
+    printf("%s\n", reply->str);
+    freeReplyObject(reply);
+    
+}
+
+
+void InputHandler::MessageProc(string channel, string msg) {       // Actually process message. Follows [channel] [message] format. Is static
+    
+    inputdvector.clear();
+    
+    high_resolution_clock::time_point msgproc_start = high_resolution_clock::now();
+    
+//    cout << "Incoming data" << endl;
+    cout << msg << endl;           //display json, original deserialised. string msg IS the json content
+
+    
+    //= CONVERT (from String to Char) ===
+
+    int n = msg.length();
+    char char_array[n + 1];             // declaring character array
+    strcpy(char_array, msg.c_str());    // copying the contents of the string to char array
+
+//        cout << "data_d in char: ";
+//        for (int i = 0; i < n; i++) {
+//            cout << char_array[i];
+//        }
+//        cout << endl;
+
+    
+    //= PARSING ===
+
+    StringStream s(char_array);
+
+    Document datad;
+    datad.ParseStream(s);
+
+    DataD structd;          // vector<DataD> using struct
+
+    //const Value& is = datad["fused_intention_scores"];
+    structd.frameid = datad["fid"].GetInt();
+//    cout << "frame id: " << structd.frameid << endl;
+    
+    //= -> DUPLICATE CHECK ===
+    
+    if (structd.frameid != fid2) {
+    
+        structd.count = /*is*/datad["count"].GetInt();     //count
+//        cout << "parsed count: " << structd.count << endl;
+
+        const Value& dat = /*is*/datad["data"];
+        for (Value::ConstValueIterator itr = dat.Begin(); itr != dat.End(); ++itr) {
+            structd.crossingScore = (*itr)["crossing"].GetDouble();    //fcs
+            cout << itr << "parsed cs: " << structd.crossingScore << endl;
+    //        structd.state = (*itr)["state"].GetString();   //state
+    //        cout << itr << "parsed state: " << structd.state << endl;
+            structd.ydistance = (*itr)["motion_parameters"]["long"].GetDouble();
+            cout << itr << "parsed y distance: " << structd.ydistance << endl;
+            structd.xdistance = (*itr)["motion_parameters"]["lat"].GetDouble();
+            cout << itr << "parsed x distance: " << structd.xdistance << endl;
+
+            inputdvector.push_back(structd);
+//            cout << itr << " pushed-back" << endl;
+        }
+
+//        high_resolution_clock::time_point msgproc_parsed = high_resolution_clock::now();
+
+        cout << fid2 << " prev vs now " << structd.frameid << endl;
+    
+    
+        //= SORT (from DataD and pushback to DataS) ===
+    
+        sort(inputdvector.begin(), inputdvector.end(), sorter);
+    
+    //    cout << "Sorted " << endl;
+        for (auto x : inputdvector) {
+            structd.ydistance = x.ydistance;
+    //        cout << "sorted ydist: " << x.ydistance << " " << structd.ydistance << endl;
+            structd.crossingScore = x.crossingScore;
+    //        cout << "sorted cs: " << x.crossingScore << " " << structd.crossingScore << endl;
+            structd.state = x.state;
+    //        cout << "sorted state: " << x.state << " " << structd.state << endl;
+            structd.xdistance = x.xdistance;
+    //        cout << "sorted xdistance: " << x.xdistance << " " << structd.xdistance << endl;
+        }
+    
+        //POPBACK objects until last remaining vector, to clear prior objects
+
+        int cntpop = 0;
+        while (!inputdvector.empty()) {
+            inputdvector.pop_back();
+    //        cout << "cntpop: " << cntpop << endl;
+            cntpop++;
+        }   
+
+//        high_resolution_clock::time_point msgproc_sorted = high_resolution_clock::now();
+    
+    //= EXECUTE next class ===
+    
+//        cout << "New frame, proceed " << endl;
+        InputHandler ih;
+        ih.SelectorLogic(&structd);
+        
+    } 
+//    else {
+//        
+//        cout << "Duplicate fid, no go" << endl;
+//    
+//    }
+    
+    fid2 = structd.frameid;
+    
+    high_resolution_clock::time_point msgproc_end = high_resolution_clock::now();
+    
+//    duration<double> parse_span = duration_cast<duration<double>>(msgproc_parsed - msgproc_start);
+//    duration<double> sort_span = duration_cast<duration<double>>(msgproc_sorted - msgproc_start);
+    duration<double> time_span = duration_cast<duration<double>>(msgproc_end - msgproc_start);
+    
+//    cout << "msgproc parse timespan: " << parse_span.count() << "s" << endl;
+//    cout << "msgproc sort timespan: " << sort_span.count() << "s" << endl;
+    cout << "msgproc fx cycle time: " << time_span.count() << "s" << endl;
+    
+}
+
+InputHandler::~InputHandler() {
+}
+

@@ -1,0 +1,24 @@
+{
+  "fid": 136, 
+  "ts": 1665646603646, 
+  "count": 1,
+  "data": [
+    {
+      "obj_id": 0, 
+      "obj_class": 4, 
+      "crossing": 0.0, 
+      "motion_parameters": {
+        "lat": -1.27439, 
+        "long": 2.6778, 
+        "vel_lat": 0.0638384, 
+        "vel_long": 0.168957
+      }, 
+      "motion_prediction": {
+        "lat": -1.27439, 
+        "long": 2.6778, 
+        "vel_lat": 0.0638384, 
+        "vel_long": 0.168957
+      }
+    }
+  ]
+}

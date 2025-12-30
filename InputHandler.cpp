@@ -1,0 +1,231 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/cppFiles/class.cc to edit this template
+ */
+
+/* 
+ * File:   InputHandler.cpp
+ * Author: weihan
+ * 
+ * Created on 31 August 2022, 15:58
+ */
+
+#include "InputHandler.h"
+
+vector<DataD> InputHandler::inputdvector;
+int InputHandler::fid2 = 0;
+
+InputHandler::InputHandler() {
+    setServerInfo();
+}
+
+InputHandler::InputHandler(const InputHandler& orig) {
+    inputdvector = orig.inputdvector;
+    std::copy(orig.inputdvector.begin(), orig.inputdvector.end(), inputdvector.begin());
+    address = orig.address;
+    channel = orig.channel;
+    fid2 = orig.fid2;
+    
+    sHandler = orig.sHandler;
+}
+
+
+void InputHandler::setServerInfo() {
+    ifstream redisinfo("RedisServer.json");
+    IStreamWrapper wrapper(redisinfo);
+
+    Document info;
+    info.ParseStream(wrapper);
+
+    const Value& dat = info["Redis_server"];
+    address = dat["address"].GetString();
+    channel = dat["channel"].GetString();
+}
+
+string InputHandler::getAddress() {
+    return address;
+}
+
+string InputHandler::getChannel() {
+    return channel;
+}
+
+bool InputHandler::sorter(const DataD& x, const DataD& y) {
+    return x.ydistance < y.ydistance;     //small to big
+//    return x.ydistance > y.ydistance;     //opposite: big to small
+}
+
+
+void InputHandler::SelectorLogic(DataD *dat) {   // conditional scenario selector with int 1, 2, 3, 4 
+    int count = dat->count;
+    
+    double fcs = dat->crossingScore;
+    string state = dat->state;
+    double ydist = dat->ydistance;
+
+
+//        cout << "selector logic fcs: " << fcs << endl;
+//        cout << "selector logic state: " << state << endl;
+//        cout << "selector logic distance: " << ydist << endl;
+
+    if (fcs >= 0.5 /*&& state == "crossing"*/ && ydist >= 13.0 && ydist <= 18.0)     //the logic
+    {
+        cout << "yer" << endl;
+        sHandler.setScenarioDecision(3);
+    } else {
+        cout << "meh" << endl;
+        sHandler.setScenarioDecision(5);                    //remove this once done testing
+    }
+}
+
+int InputHandler::RedisConnect() {
+    
+    ScenarioHandler::ScenarioLoading();     //for static function
+    
+    //= To Connect        
+    auto redis = Redis(getAddress());
+    //cout << redis.ping() << endl;                       //ping server for pong return
+
+    // SET some things
+    /*
+    for (auto idx = 0; idx < 100; ++idx) {
+        // Reuse the Redis object in the loop.
+        redis.set("key", "val");
+    }
+    */
+
+    //= To Subscribe
+    auto sub = redis.subscriber();
+    sub.on_message(&MessageProc);        // Process message of MESSAGE type. Goes to the address
+           
+    sub.subscribe(getChannel());         // Subscribe to channel
+
+    //= Consume messages
+    while (true) {
+        try {
+        sub.consume();
+        } catch (const sw::redis::Error &err) {
+            // Handle exceptions
+            cout << err.what() << endl;
+        }
+    } 
+}
+
+ void InputHandler::MessageProc(string channel, string msg) {       // Actually process message. Follows [channel] [message] format. Is static
+    
+     inputdvector.clear();
+    
+     high_resolution_clock::time_point msgproc_start = high_resolution_clock::now();
+    
+     //cout << msg << endl;           //display json, original deserialised. string msg IS the json content
+    
+     //= CONVERT (from String to Char) ===
+     int n = msg.length();
+     char char_array[n + 1];             // declaring character array
+     strcpy(char_array, msg.c_str());    // copying the contents of the string to char array
+
+ //        cout << "data_d in char: ";
+ //        for (int i = 0; i < n; i++) {
+ //            cout << char_array[i];
+ //        }
+ //        cout << endl;
+
+    
+     //= PARSING ===
+
+     StringStream s(char_array);
+
+     Document datad;
+     datad.ParseStream(s);
+
+     DataD structd;          // vector<DataD> using struct
+
+     //const Value& is = datad["fused_intention_scores"];
+     structd.frameid = datad["fid"].GetInt();
+     cout << "frame id: " << structd.frameid << endl;
+    
+     //= -> DUPLICATE CHECK ===
+    
+     if (structd.frameid != fid2) {
+    
+         structd.count = /*is*/datad["count"].GetInt();     //count
+ //        cout << "parsed count: " << structd.count << endl;
+         
+         if (structd.count != 0) {
+
+            const Value& dat = /*is*/datad["data"];
+            for (Value::ConstValueIterator itr = dat.Begin(); itr != dat.End(); ++itr) {
+                structd.crossingScore = (*itr)["crossing"].GetDouble();    //fcs
+    //            cout << itr << "parsed cs: " << structd.crossingScore << endl;
+         //       structd.state = (*itr)["state"].GetString();   //state
+        //        cout << itr << "parsed state: " << structd.state << endl;
+                structd.ydistance = (*itr)["motion_parameters"]["long"].GetDouble();
+    //            cout << itr << "parsed y distance: " << structd.distance << endl;
+
+                inputdvector.push_back(structd);
+    //            cout << itr << " pushed-back" << endl;
+            }
+            
+ //        high_resolution_clock::time_point msgproc_parsed = high_resolution_clock::now();
+
+         cout << fid2 << " prev vs now " << structd.frameid << endl;
+    
+    
+         //= SORT (from DataD and pushback to DataS) ===
+    
+         sort(inputdvector.begin(), inputdvector.end(), sorter);
+    
+
+//     //    cout << "Sorted " << endl;
+//         for (auto x : inputdvector) {
+//             structd.ydistance = x.ydistance;
+//     //        cout << "sorted ydist: " << x.distance << " " << structd.distance << endl;
+//             structd.crossingScore = x.crossingScore;
+//     //        cout << "sorted cs: " << x.crossingScore << " " << structd.crossingScore << endl;
+//             structd.state = x.state;
+//     //        cout << "sorted state: " << x.state << " " << structd.state << endl;
+//         }
+
+    
+//         //POPBACK objects until last remaining vector, to clear prior objects
+//         int cntpop = 0;
+//         while (!inputdvector.empty()) {
+//             inputdvector.pop_back();
+//     //        cout << "cntpop: " << cntpop << endl;
+//             cntpop++;
+//         }   
+
+ //        high_resolution_clock::time_point msgproc_sorted = high_resolution_clock::now();
+    
+     //= EXECUTE next class ===
+    
+ //        cout << "New frame, proceed " << endl;
+         InputHandler ih;
+         //ih.SelectorLogic(&structd);
+         ih.SelectorLogic(&inputdvector[0]);
+         }
+        
+     } 
+ //    else {
+ //        
+ //        cout << "Duplicate fid, no go" << endl;
+ //    
+ //    }
+    
+     fid2 = structd.frameid;
+    
+     high_resolution_clock::time_point msgproc_end = high_resolution_clock::now();
+    
+ //    duration<double> parse_span = duration_cast<duration<double>>(msgproc_parsed - msgproc_start);
+ //    duration<double> sort_span = duration_cast<duration<double>>(msgproc_sorted - msgproc_start);
+     duration<double> time_span = duration_cast<duration<double>>(msgproc_end - msgproc_start);
+    
+ //    cout << "msgproc parse timespan: " << parse_span.count() << "s" << endl;
+ //    cout << "msgproc sort timespan: " << sort_span.count() << "s" << endl;
+     cout << "msgproc fx cycle time: " << time_span.count() << "s" << endl;
+    
+ }
+
+InputHandler::~InputHandler() {
+}
+
