@@ -9,4 +9,4 @@ The Scenario classes handle the configuration of pedestrian scenarios by preload
 
 The Output classes use functions from the OpenCV library to handle the reading of pre-loaded images and animations for projection output. 
 
-Codes to be run on Linux.
+Codes built and run on Linux.
